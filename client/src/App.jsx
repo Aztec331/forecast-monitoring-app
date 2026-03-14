@@ -1,121 +1,189 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useEffect, useState } from "react";
+import { Line } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  LineElement,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  Legend,
+  Tooltip
+} from "chart.js";
+
+ChartJS.register(
+  LineElement,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  Legend,
+  Tooltip
+);
 
 function App() {
-  const [count, setCount] = useState(0)
+
+  const [startTime, setStartTime] = useState("2024-01-01T00:00");
+  const [endTime, setEndTime] = useState("2024-01-07T23:30");
+  const [horizon, setHorizon] = useState(4);
+
+  const [chartData, setChartData] = useState(null);
+
+  const fetchData = () => {
+
+    const start = new Date(startTime).toISOString();
+    const end = new Date(endTime).toISOString();
+
+    fetch(`http://127.0.0.1:8000/wind-data?start=${start}&end=${end}&horizon=${horizon}`)
+      .then(res => res.json())
+      .then(data => {
+
+        const labels = data.map(d => {
+
+          const date = new Date(d.time);
+
+          const time = date.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit"
+          });
+
+          const day = date.toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "2-digit"
+          });
+
+          return [time, day];
+
+        });
+
+        const actual = data.map(d => d.actual);
+        const forecast = data.map(d => d.forecast);
+
+        setChartData({
+          labels,
+          datasets: [
+            {
+              label: "Actual Generation",
+              data: actual,
+              borderColor: "blue",
+              tension: 0.3,
+              pointRadius: 0
+            },
+            {
+              label: "Forecast Generation",
+              data: forecast,
+              borderColor: "green",
+              tension: 0.3,
+              pointRadius: 0
+            }
+          ]
+        });
+
+      });
+
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: "top"
+      }
+    },
+    scales: {
+      x: {
+        ticks: {
+          maxTicksLimit: 8,
+          autoSkip: true,
+          maxRotation: 0,
+          minRotation: 0
+        },
+        title: {
+          display: true,
+          text: "Target Time End (UTC)"
+        }
+      },
+      y: {
+        title: {
+          display: true,
+          text: "Wind Generation (MW)"
+        }
+      }
+    }
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
+
+    <div
+      style={{
+        width: "90%",
+        maxWidth: "1200px",
+        margin: "40px auto",
+        textAlign: "center"
+      }}
+    >
+
+      <h2>Wind Forecast Monitoring</h2>
+
+      {/* Controls */}
+
+      <div style={{
+        display: "flex",
+        justifyContent: "space-between",
+        marginBottom: "30px",
+        gap: "20px"
+      }}>
+
         <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
+          <label>Start Time</label><br/>
+          <input
+            type="datetime-local"
+            value={startTime}
+            onChange={(e) => setStartTime(e.target.value)}
+          />
         </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
+
+        <div>
+          <label>End Time</label><br/>
+          <input
+            type="datetime-local"
+            value={endTime}
+            onChange={(e) => setEndTime(e.target.value)}
+          />
+        </div>
+
+        <div style={{width:"300px"}}>
+          <label>Forecast Horizon: {horizon}h</label><br/>
+          <input
+            type="range"
+            min="0"
+            max="48"
+            value={horizon}
+            onChange={(e) => setHorizon(e.target.value)}
+            style={{width:"100%"}}
+          />
+        </div>
+
+        <button onClick={fetchData}>
+          Update Chart
         </button>
-      </section>
 
-      <div className="ticks"></div>
+      </div>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      {/* Chart */}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      <div style={{height:"500px"}}>
+        {chartData && <Line data={chartData} options={options} />}
+      </div>
+
+    </div>
+
+  );
+
 }
 
-export default App
+export default App;
